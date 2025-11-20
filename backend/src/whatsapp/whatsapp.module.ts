@@ -9,21 +9,20 @@ import { PaymentService } from './payment.service';
 
 @Module({
   imports: [
-
     BullModule.registerQueue({
       name: 'incoming-message',
     }),
   ],
   controllers: [
     WhatsappController,
-    PaymentController
+    PaymentController,
   ],
   providers: [
     WhatsappProcessor,
     WhatsappSendingService,
     WhatsappGateway,
-    PaymentService.
+    PaymentService,
   ],
-  exports: [WhatsappGateway]
+  exports: [WhatsappGateway],
 })
 export class WhatsappModule {}
