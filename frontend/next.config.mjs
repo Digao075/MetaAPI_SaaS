@@ -9,6 +9,9 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   }
+  webpack: (config) => {
+    return config;
+  },
 };
 
 export default withPWA({
@@ -16,4 +19,6 @@ export default withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === 'development',
+  buildExcludes: [/middleware-manifest.json$/],
+  cacheOnFrontEndNav: true,
 })(nextConfig);
