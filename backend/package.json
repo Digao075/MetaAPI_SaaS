@@ -484,7 +484,7 @@
     "yoctocolors-cjs": "^2.1.3"
   },
   "scripts": {
-    "build": "npx nest build",
+    "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
     "test": "echo \"Error: no test specified\" && exit 1",
