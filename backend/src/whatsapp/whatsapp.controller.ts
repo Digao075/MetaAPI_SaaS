@@ -4,6 +4,7 @@ import { Queue } from 'bullmq';
 import { WhatsappSendingService } from './whatsapp-sending.service';
 import { PrismaService } from 'src/core/prisma/prisma.service';
 import axios from 'axios';
+import { PLAN_LIMITS } from 'src/core/config/plans.config';
 
 @Controller('v1/meta/webhook')
 export class WhatsappController {
@@ -15,7 +16,6 @@ export class WhatsappController {
     private readonly prisma: PrismaService,
   ) {}
 
-  // --- 1. RECEBIMENTO (WEBHOOK META) ---
   @Post()
   async handleWebhook(@Body() payload: any) {
     this.logger.log('Novo payload recebido do WhatsApp...');
@@ -34,8 +34,6 @@ export class WhatsappController {
     }
     return { status: 'OK' };
   }
-
-  // --- 2. VERIFICAÇÃO (CHALLENGE META) ---
   @Get()
   verifyWebhook(
     @Query('hub.mode') mode: string,
@@ -51,7 +49,6 @@ export class WhatsappController {
     }
   }
 
-  // --- 3. ENVIO DE MENSAGEM (API INTERNA) ---
   @Post('/send-text')
   async handleSendMessage(
     @Body()
@@ -72,7 +69,6 @@ export class WhatsappController {
     return { status: 'OK', message: 'Mensagem enviada e salva no DB' };
   }
 
-  // --- 4. LEITURA DE DADOS (FRONTEND) ---
   @Get('/chat/:tenantId/contacts')
   async getContacts(@Param('tenantId') tenantId: string) {
     const contacts = await this.prisma.contact.findMany({
@@ -107,7 +103,6 @@ export class WhatsappController {
     return messages;
   }
 
-  // --- 5. ATUALIZAÇÃO DE STATUS (KANBAN + WEBHOOK SAÍDA) ---
   @Post('/chat/:tenantId/contacts/:contactId/status')
   async updateContactStatus(
     @Param('tenantId') tenantId: string,
@@ -148,5 +143,120 @@ export class WhatsappController {
     } catch (error) {
       this.logger.error('❌ Falha ao enviar webhook externo', error.message);
     }
+  }
+  @Get('/dashboard/:tenantId/stats')
+  async getDashboardStats(@Param('tenantId') tenantId: string) {
+    const totalContacts = await this.prisma.contact.count({
+      where: { tenantId },
+    });
+
+    const contactsByStatus = await this.prisma.contact.groupBy({
+      by: ['status'],
+      where: { tenantId },
+      _count: {
+        id: true,
+      },
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const messagesToday = await this.prisma.message.count({
+      where: {
+        tenantId,
+        timestamp: {
+          gte: today, 
+        },
+      },
+    });
+
+    const incomingCount = await this.prisma.message.count({
+      where: { tenantId, direction: 'incoming' },
+    });
+    const outgoingCount = await this.prisma.message.count({
+      where: { tenantId, direction: 'outgoing' },
+    });
+
+    return {
+      totalContacts,
+      messagesToday,
+      contactsByStatus: contactsByStatus.map(item => ({
+        status: item.status || 'OPEN',
+        count: item._count.id
+      })),
+      messagesAnalysis: {
+        incoming: incomingCount,
+        outgoing: outgoingCount
+      }
+    };
+  }
+  @Get('/settings/:tenantId')
+  async getSettings(@Param('tenantId') tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { connections: true },
+    });
+
+    if (!tenant) throw new Error('Tenant não encontrado');
+
+    return {
+      name: tenant.name,
+      webhookUrl: tenant.webhookUrl,
+      connections: tenant.connections.map(conn => ({
+        id: conn.id,
+        name: conn.name,
+        phoneId: conn.phone_number_id,
+        hasToken: !!conn.access_token_encrypted
+  }))
+    };
+  }
+
+@Post('/settings/:tenantId/connections')
+  async addConnection(
+    @Param('tenantId') tenantId: string,
+    @Body() body: { name: string; phoneId: string; token: string },
+  ) {
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      include: { 
+        _count: { select: { connections: true } } 
+      }
+    });
+    if (!tenant) throw new Error('Tenant não encontrado');
+    
+const currentPlan = tenant.plan || 'FREE'; 
+    const limits = PLAN_LIMITS[currentPlan];
+    const currentConnections = tenant._count.connections;
+
+    if (currentConnections >= limits.maxConnections) {
+      throw new Error(
+        `Seu plano ${currentPlan} permite apenas ${limits.maxConnections} conexões. Faça upgrade para adicionar mais.`
+      );
+    }
+
+    const newConnection = await this.prisma.whatsappConnection.create({
+      data: {
+        tenantId,
+        name: body.name,
+        phone_number_id: body.phoneId,
+        access_token_encrypted: body.token,
+      },
+    });
+
+    return { status: 'OK', message: 'Conexão adicionada!', data: newConnection };
+  }
+  @Post('/settings/:tenantId/connections/:connId/delete') 
+  async deleteConnection(
+    @Param('tenantId') tenantId: string,
+    @Param('connId') connId: string,
+  ) {
+    await this.prisma.whatsappConnection.deleteMany({
+      where: {
+        id: connId,
+        tenantId: tenantId 
+      }
+    });
+    return { status: 'OK' };
   }
 }

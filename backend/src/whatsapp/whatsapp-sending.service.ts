@@ -1,12 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
+// import { HttpService } from '@nestjs/axios'; // Futuro: para chamadas reais
 
 @Injectable()
 export class WhatsappSendingService {
   private readonly logger = new Logger(WhatsappSendingService.name);
 
   constructor(private readonly prisma: PrismaService) {}
-
 
   async sendTextMessage(
     tenantId: string,
@@ -16,7 +16,7 @@ export class WhatsappSendingService {
   ) {
     this.logger.log(`Enviando: "${text}" para ${contactWaId}`);
 
-    const connection = await this.prisma.whatsappConnection.findUnique({
+    const connection = await this.prisma.whatsappConnection.findFirst({
       where: { tenantId: tenantId },
     });
 
@@ -32,8 +32,7 @@ export class WhatsappSendingService {
     if (!connection) throw new Error(`Tenant ${tenantId} não tem conexão WPP.`);
     if (!contact) throw new Error(`Contato ${contactWaId} não encontrado.`);
 
-    const accessToken = this.decryptToken(connection.access_token_encrypted);
-    const phoneNumberId = connection.phone_number_id;
+    const accessToken = connection.access_token_encrypted; 
 
     try {
       this.logger.log('--- MOCK: CHAMANDO API DA META ---');
@@ -42,11 +41,11 @@ export class WhatsappSendingService {
       this.logger.log(`> BODY: ${text}`);
       this.logger.log('------------------------------------');
 
+      
     } catch (error) {
       this.logger.error('Erro ao enviar mensagem para a Meta', error);
       throw error;
     }
-
 
     const savedMessage = await this.prisma.message.create({
       data: {
@@ -56,20 +55,11 @@ export class WhatsappSendingService {
         messageType: 'text',
         direction: 'outgoing',
         timestamp: new Date(),
-        sentByUserId: senderUserId, 
+        sentByUserId: senderUserId,
       },
     });
 
     this.logger.log(`Mensagem 'outgoing' salva no DB (ID: ${savedMessage.id})`);
     return savedMessage;
-  }
-
-
-  private decryptToken(encryptedToken: string): string {
-    this.logger.warn(
-      `[MOCK] Descriptografando token "${encryptedToken}"...`,
-    );
-
-    return encryptedToken;
   }
 }

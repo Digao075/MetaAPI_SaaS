@@ -8,16 +8,23 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum PlanType {
+  FREE
+  STARTER
+  PRO
+}
 
 model Tenant {
   id          String    @id @default(uuid())
   name        String
   createdAt   DateTime  @default(now())
   webhookUrl  String?
+  plan        PlanType  @default(FREE)
+  planStatus  String    @default("ACTIVE") // ACTIVE, PAST_DUE, CANCELED
   owner       User?     @relation("TenantOwner", fields: [ownerId], references: [id])
   ownerId     String?    @unique 
   users       User[]    @relation("TenantUsers")
-  connection  WhatsappConnection?
+  connections WhatsappConnection[]
   contacts    Contact[]
   messages    Message[]
 }
@@ -37,8 +44,9 @@ model WhatsappConnection {
   id                   String  @id @default(uuid())
   phone_number_id      String  @unique
   access_token_encrypted String  
+  name                 String   @default("WhatsApp Principal")
   tenant               Tenant  @relation(fields: [tenantId], references: [id])
-  tenantId             String  @unique 
+  tenantId             String   
 }
 
 model Contact {

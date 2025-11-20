@@ -26,7 +26,7 @@ const SOCKET_URL = `${BASE_URL}`;
       });
       const { access_token } = response.data;
       localStorage.setItem("saas_token", access_token);
-      router.push("/chat");
+      router.push("/dashboard");
       
     } catch (err) {
       console.error(err);
