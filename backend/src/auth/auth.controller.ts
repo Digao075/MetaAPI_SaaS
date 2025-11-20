@@ -1,8 +1,10 @@
-import { Controller, Post, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, Logger } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
-@Controller('auth')
+@Controller('v1/auth') 
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private authService: AuthService) {}
 
   @Post('login')
@@ -12,5 +14,17 @@ export class AuthController {
       throw new UnauthorizedException('Credenciais inválidas');
     }
     return this.authService.login(user);
+  }
+
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: { email: string }) {
+    this.logger.log(`Solicitação de recuperação de senha para: ${body.email}`);
+    
+    await this.authService.sendRecoveryEmail(body.email);
+
+    return { 
+      message: 'Se o email existir, enviamos um link de recuperação.' 
+    };
   }
 }
