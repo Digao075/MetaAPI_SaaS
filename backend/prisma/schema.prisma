@@ -1,0 +1,68 @@
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+model Tenant {
+  id          String    @id @default(uuid())
+  name        String
+  createdAt   DateTime  @default(now())
+  webhookUrl  String?
+  owner       User?     @relation("TenantOwner", fields: [ownerId], references: [id])
+  ownerId     String?    @unique 
+  users       User[]    @relation("TenantUsers")
+  connection  WhatsappConnection?
+  contacts    Contact[]
+  messages    Message[]
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  role          String    @default("agent") // 'agent' ou 'admin'
+  createdAt     DateTime  @default(now())
+  ownedTenant   Tenant?   @relation("TenantOwner")
+  tenant        Tenant    @relation("TenantUsers", fields: [tenantId], references: [id])
+  tenantId      String
+  sentMessages  Message[]
+}
+model WhatsappConnection {
+  id                   String  @id @default(uuid())
+  phone_number_id      String  @unique
+  access_token_encrypted String  
+  tenant               Tenant  @relation(fields: [tenantId], references: [id])
+  tenantId             String  @unique 
+}
+
+model Contact {
+  id              String    @id @default(uuid())
+  whatsapp_number String  
+  name            String?   
+  createdAt       DateTime  @default(now())
+  status          String    @default("OPEN") // OPEN, PENDING, CLOSED
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  tenantId        String
+  messages        Message[]
+  @@unique([tenantId, whatsapp_number])
+}
+
+model Message {
+  id              String    @id @default(uuid())
+  content         String    // O texto, ou JSON do template/imagem
+  messageType     String    @default("text") // 'text', 'image', 'audio', etc.
+  direction       String    // 'incoming' (cliente mandou) ou 'outgoing' (atendente mandou)
+  timestamp       DateTime  // Timestamp da mensagem (vindo da Meta ou do now())
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  tenantId        String
+  contact         Contact   @relation(fields: [contactId], references: [id])
+  contactId       String
+  sentByUser      User?     @relation(fields: [sentByUserId], references: [id])
+  sentByUserId    String?   
+}
