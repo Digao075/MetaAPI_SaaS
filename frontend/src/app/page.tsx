@@ -11,11 +11,16 @@ export default function LoginPage() {
   const [password, setPassword] = useState("123");
   const [error, setError] = useState("");
 
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3333";
+
+const API_URL = `${BASE_URL}`; 
+const SOCKET_URL = `${BASE_URL}`;
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    try {      const response = await axios.post("http://localhost:3333/auth/login", {
+    try {      const response = await axios.post(`${BASE_URL}/auth/login`, {
         email,
         password,
       });

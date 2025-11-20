@@ -7,8 +7,10 @@ import { MessageSquare, Send, User, Phone, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode"; 
 
-const API_URL = "http://localhost:3333"; 
-const SOCKET_URL = "http://localhost:3333";
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3333";
+
+const API_URL = `${BASE_URL}`; 
+const SOCKET_URL = `${BASE_URL}`;
 
 
 interface TokenPayload {

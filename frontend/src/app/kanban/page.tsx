@@ -7,8 +7,10 @@ import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { LogOut, MessageSquare, LayoutDashboard, Loader2 } from "lucide-react";
 
-const API_URL = "http://localhost:3333";
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3333";
 
+const API_URL = `${BASE_URL}`; 
+const SOCKET_URL = `${BASE_URL}`;
 
 interface Contact {
   id: string;
