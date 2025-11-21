@@ -13,7 +13,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  
   const [view, setView] = useState<"login" | "forgot">("login"); 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -26,16 +26,17 @@ export default function LoginPage() {
     setError("");
 
     try {
-
       const res = await axios.post(`${BASE_URL}/v1/auth/login`, {
         email,
         password,
       });
 
+
       localStorage.setItem("saas_token", res.data.access_token);
       router.push("/dashboard");
       
     } catch (err: any) {
+      console.error(err);
       if (err.response?.status === 401) {
         setError("Credenciais inválidas.");
       } else {
@@ -71,9 +72,10 @@ export default function LoginPage() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-600/10 blur-[100px] rounded-full pointer-events-none"></div>
 
       <div className="bg-slate-900 p-8 rounded-2xl border border-slate-800 shadow-2xl w-full max-w-md relative z-10 backdrop-blur-sm transition-all duration-500">
-
+        
         <div className="text-center mb-8">
           <div className="w-20 h-20 mx-auto mb-4 relative flex items-center justify-center bg-slate-950 rounded-xl border border-slate-800 shadow-lg shadow-red-900/10 p-3">
+
              <img src="/logo.png" alt="BullAPI" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">
@@ -151,6 +153,7 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+
         {view === "forgot" && (
           <form onSubmit={handleForgot} className="space-y-6 animate-fade-in">
             <div>
@@ -187,6 +190,10 @@ export default function LoginPage() {
             </button>
           </form>
         )}
+
+        <p className="text-center text-slate-500 text-sm mt-8">
+          Não tem uma conta? <a href="/register" className="text-white hover:text-red-400 font-medium transition-colors">Criar conta grátis</a>
+        </p>
 
       </div>
     </div>

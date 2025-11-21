@@ -16,6 +16,10 @@ export class AuthController {
     return this.authService.login(user);
   }
 
+  @Post('register')
+  async register(@Body() body: { email: string; password: string; companyName: string }) {
+    return this.authService.register(body);
+  }
 
   @Post('forgot-password')
   async forgotPassword(@Body() body: { email: string }) {
