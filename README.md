@@ -51,6 +51,3 @@ The system follows an event-driven architecture to ensure scalability and decoup
 * Redis Instance (Local or Cloud)
 * Meta Developer Account (App ID & Phone Number ID)
 
-### 1. Clone and Install
-```bash
-git clone [https://github.com/your-username/bullapi.git](https://github.com/your-username/bullapi.git)
