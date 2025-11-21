@@ -51,3 +51,13 @@ The system follows an event-driven architecture to ensure scalability and decoup
 * Redis Instance (Local or Cloud)
 * Meta Developer Account (App ID & Phone Number ID)
 
+* 📦 Deployment
+Frontend: Optimized for Vercel (Zero config).
+
+Backend: Optimized for Render/Railway (Dockerfile or Node environment).
+
+Database: Neon.tech (Serverless Postgres).
+
+📄 License
+This project is proprietary software. Unauthorized copying of this file, via any medium, is strictly prohibited.
+
