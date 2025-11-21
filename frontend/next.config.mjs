@@ -8,9 +8,6 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   
-  eslint: {
-    ignoreDuringBuilds: true,
-  }, 
 
   webpack: (config) => {
     return config;
