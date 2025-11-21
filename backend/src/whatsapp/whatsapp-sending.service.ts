@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/core/prisma/prisma.service';
-// import { HttpService } from '@nestjs/axios'; // Futuro: para chamadas reais
+import axios from 'axios';
 
 @Injectable()
 export class WhatsappSendingService {
@@ -14,52 +14,70 @@ export class WhatsappSendingService {
     contactWaId: string,
     text: string,
   ) {
-    this.logger.log(`Enviando: "${text}" para ${contactWaId}`);
+    this.logger.log(`Preparando envio para ${contactWaId}...`);
 
     const connection = await this.prisma.whatsappConnection.findFirst({
       where: { tenantId: tenantId },
     });
 
-    const contact = await this.prisma.contact.findUnique({
-      where: {
-        tenantId_whatsapp_number: {
-          tenantId: tenantId,
-          whatsapp_number: contactWaId,
-        },
-      },
-    });
+    if (!connection) throw new Error(`Tenant ${tenantId} sem conexão.`);
 
-    if (!connection) throw new Error(`Tenant ${tenantId} não tem conexão WPP.`);
-    if (!contact) throw new Error(`Contato ${contactWaId} não encontrado.`);
 
     const accessToken = connection.access_token_encrypted; 
+    const phoneNumberId = connection.phone_number_id;
 
-    try {
-      this.logger.log('--- MOCK: CHAMANDO API DA META ---');
-      this.logger.log(`> TOKEN: ${accessToken}`);
-      this.logger.log(`> TO: ${contactWaId}`);
-      this.logger.log(`> BODY: ${text}`);
-      this.logger.log('------------------------------------');
-
-      
-    } catch (error) {
-      this.logger.error('Erro ao enviar mensagem para a Meta', error);
-      throw error;
+    if (accessToken === 'token-pendente') {
+        this.logger.warn('⚠️ Tentativa de envio com TOKEN PENDENTE. Configure em Settings.');
+        return;
     }
 
-    const savedMessage = await this.prisma.message.create({
-      data: {
-        tenantId: tenantId,
-        contactId: contact.id,
-        content: text,
-        messageType: 'text',
-        direction: 'outgoing',
-        timestamp: new Date(),
-        sentByUserId: senderUserId,
-      },
+    const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+    
+    const payload = {
+      messaging_product: 'whatsapp',
+      to: contactWaId,
+      type: 'text',
+      text: { body: text },
+    };
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    try {
+
+      await axios.post(url, payload, { headers });
+      this.logger.log(`✅ Mensagem enviada com sucesso na Meta!`);
+    } catch (error: any) {
+
+      this.logger.error('❌ Erro na API da Meta:', error.response?.data || error.message);
+
+    }
+
+    const contact = await this.prisma.contact.findUnique({
+        where: {
+          tenantId_whatsapp_number: {
+            tenantId,
+            whatsapp_number: contactWaId
+          }
+        }
     });
 
-    this.logger.log(`Mensagem 'outgoing' salva no DB (ID: ${savedMessage.id})`);
-    return savedMessage;
+    if(contact) {
+        const savedMessage = await this.prisma.message.create({
+        data: {
+            tenantId: tenantId,
+            contactId: contact.id,
+            content: text,
+            messageType: 'text',
+            direction: 'outgoing',
+            timestamp: new Date(),
+            sentByUserId: senderUserId,
+        },
+        });
+        this.logger.log(`Mensagem salva no histórico (ID: ${savedMessage.id})`);
+        return savedMessage;
+    }
   }
 }
