@@ -8,8 +8,8 @@ import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3333";
