@@ -80,4 +80,60 @@ export class WhatsappSendingService {
         return savedMessage;
     }
   }
+  async sendMediaMessage(
+    tenantId: string,
+    senderUserId: string,
+    contactWaId: string,
+    mediaUrl: string,
+    mediaType: string,
+    caption: string = '',
+  ) {
+    const connection = await this.prisma.whatsappConnection.findFirst({ where: { tenantId } });
+    if (!connection) throw new Error(`Tenant ${tenantId} sem conexão.`);
+
+    const accessToken = connection.access_token_encrypted;
+    const phoneNumberId = connection.phone_number_id;
+
+    const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`;
+    
+    const payload: any = {
+      messaging_product: 'whatsapp',
+      to: contactWaId,
+      type: mediaType,
+    };
+
+    payload[mediaType] = { link: mediaUrl };
+    
+    if (mediaType !== 'audio' && caption) {
+        payload[mediaType].caption = caption;
+        if (mediaType === 'document') payload[mediaType].filename = caption; 
+    }
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
+    try {
+      await axios.post(url, payload, { headers });
+      this.logger.log(`✅ Mídia (${mediaType}) enviada com sucesso!`);
+    } catch (error: any) {
+      this.logger.error('❌ Erro na API da Meta:', error.response?.data || error.message);
+    }
+
+    const contact = await this.prisma.contact.findFirst({ where: { tenantId, whatsapp_number: contactWaId } });
+    if (contact) {
+        await this.prisma.message.create({
+            data: {
+                tenantId,
+                contactId: contact.id,
+                content: mediaUrl,
+                messageType: mediaType,
+                direction: 'outgoing',
+                timestamp: new Date(),
+                sentByUserId: senderUserId,
+            }
+        });
+    }
+  }
 }

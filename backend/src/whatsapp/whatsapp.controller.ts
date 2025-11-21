@@ -259,4 +259,28 @@ const currentPlan = tenant.plan || 'FREE';
     });
     return { status: 'OK' };
   }
+  
+  @Post('/send-media')
+  async handleSendMedia(
+    @Body()
+    body: {
+      tenantId: string;
+      userId: string;
+      contactWaId: string;
+      content: string; 
+      type: string;    
+      caption?: string;
+    },
+  ) {
+    this.logger.log(`Nova solicitação de mídia (${body.type}) para ${body.contactWaId}`);
+    await this.sendingService.sendMediaMessage(
+      body.tenantId,
+      body.userId,
+      body.contactWaId,
+      body.content,
+      body.type,
+      body.caption
+    );
+    return { status: 'OK', message: 'Mídia enviada' };
+  }
 }
