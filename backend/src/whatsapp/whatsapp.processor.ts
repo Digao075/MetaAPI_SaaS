@@ -20,23 +20,34 @@ export class WhatsappProcessor {
     const { phoneNumberId, payload } = job.data;
 
     try {
-      const messageData = payload.entry[0].changes[0].value.messages[0];
-      const contactData = payload.entry[0].changes[0].value.contacts[0];
+
+      const value = payload.entry?.[0]?.changes?.[0]?.value;
+
+
+      if (!value || !value.messages) {
+
+        return;
+      }
+
+      const messageData = value.messages[0];
+      const contactData = value.contacts?.[0]; 
+
+      if (!contactData) return;
 
       const contactWaId = contactData.wa_id;
       const contactName = contactData.profile.name;
-      const messageBody = messageData.text?.body || ''; 
+      const messageBody = messageData.text?.body || '[Mídia/Outros]'; 
       const messageType = messageData.type;
       const messageTimestamp = new Date(parseInt(messageData.timestamp) * 1000);
 
-      const connection = await this.prisma.whatsappConnection.findUnique({
+
+      const connection = await this.prisma.whatsappConnection.findFirst({
         where: { phone_number_id: phoneNumberId },
       });
 
       if (!connection) {
-        throw new Error(
-          `Tenant não encontrado para phone_number_id: ${phoneNumberId}`,
-        );
+        this.logger.warn(`Tenant não encontrado para phone_number_id: ${phoneNumberId}`);
+        return;
       }
 
       const tenantId = connection.tenantId;
@@ -96,7 +107,7 @@ export class WhatsappProcessor {
 
     } catch (error) {
       this.logger.error(`Job #${job.id} falhou`, error.stack);
-      throw error;
+
     }
   }
 }
